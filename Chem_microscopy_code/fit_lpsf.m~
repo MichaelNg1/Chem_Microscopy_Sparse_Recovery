@@ -1,0 +1,25 @@
+
+%-Load Data
+blobfilename = 'blob_072816';
+fileType = '.xlsx';
+blobLength = 1500;
+
+
+blobDataRaw = xlsread([blobfilename, fileType]);
+blobLine = imresize(blobDataRaw(:,2),[blobLength,1]);
+blobLine = blobLine - min(blobLine); %-Adjust to be non-negative
+
+
+%-Fit Curve
+% p_init = [25,30,350*max(blobLine)]; %-Gamma
+% p_init = [26,1.8e4,300*max(blobLine)]; %-Inverse Gamma
+p_init = [1e-4,-1.2,0.5*max(blobLine) ];
+
+p = nlinfit(1:blobLength,blobLine',@lpsf,p_init);
+
+
+%-Plot Result
+idx = 1:blobLength;
+plot(idx, blobLine,         'b-', ...
+     idx, lpsf(p,idx),      'r-', ...
+     idx, lpsf(p_init,idx), 'k-');
