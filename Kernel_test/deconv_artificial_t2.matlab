@@ -1,5 +1,5 @@
-%% [Description] This script attempts to find the kernel parameters given the kernel
-%shape and the activation map.
+%% [Description] This script attempts to find the activation map given the
+% kernel parameters.
 
 clear all;
 %-Add the path for original lpsf function
@@ -27,7 +27,7 @@ dp = 0.01 * ones(1,3);
 
 %-Functions to generate observation and objective
 gen_y = @(kernel, x, map, p) conv(kernel(p,x), map, 'same');
-objective = @(Yhat, Y) norm(Yhat - Y,2)^2;
+objective = @(Yhat, Y, map) norm(map,1) + 0.5* norm(Yhat - Y,2)^2;
 
 %-Generate observation
 Y = gen_y(kernel, range, activation_map, p);
@@ -41,12 +41,12 @@ tp = 0.7/(norm(Y,'fro').^2); % Think about this
 %       - d: kernel function
 
 %- Initialize variables:
-p_task = zeros(1,length(p)) + 1;
+x_task = zeros(1,length(activation_map)) + 1;
 Yhat = zeros(1,samples_num);
 error = zeros(1,niter);
 for i = 1:niter
-    Yhat = gen_y(kernel, range, activation_map, p_task);
-    e = objective(Yhat, Y);
+    Yhat = gen_y(kernel, range, x_task, p);
+    e = objective(Yhat, Y, x_task);
     error(i) = e;
     
     %Estimate Jacobian
