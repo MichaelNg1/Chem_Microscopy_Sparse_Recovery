@@ -1,8 +1,8 @@
-%% TODO: Make a well annotated function from this script
+%% [Description] This script 
 
 clear all;
 %-Add the path for original lpsf function
-addpath('C:\Users\Michael\Documents\Columbia\Wright\Line Detection Code\Chem_microscopy_code');
+addpath('..\Chem_microscopy_code');
 
 %% Constants %%
 samples_num = 128;  % Number of samples
@@ -18,8 +18,8 @@ range = 1:samples_num;          % assume unit distance
 activation_map = zeros(1, samples_num);
 activation_map(xi) = 1;
 
-%-Genearte random parameters
-p = [1, 2, -2];
+%-Assign truth parameters
+p = [1, 1.5, -2];
 
 %-Generate observation
 Y = zeros(1, samples_num);
@@ -69,7 +69,8 @@ for i = 1:niter
     %-TODO: Update stepsize
     disp(['==== Number of iterations :', num2str(i), ' ====']);
     disp(['Objective: ', num2str(e)]);
-    disp(['p: ', num2str(p_task)]);
+    disp(['p_test: ', num2str(p_task)]);
+    disp(['p_real: ', num2str(p)])
 end
 
 %% Visualization %%
@@ -80,7 +81,7 @@ hold on;
 plot(range, Y);
 plot(range, Yhat);
 legend('Truth', 'Learned');
-scatter(xi,zeros(1,k_num),'x');
+stem(xi, max(Y) * ones(1,length(xi)));
 title('Truth vs. Learned');
 hold off;
 
