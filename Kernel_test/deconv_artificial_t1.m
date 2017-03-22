@@ -8,8 +8,8 @@ addpath('..\Chem_microscopy_code');
 %% Constants %%
 samples_num = 128;  % Number of samples
 kernel = @lpsf;     % Kernel used
-niter = 100;         % Number of iterations
-k_num = 4;          % Number of "spikes"
+niter = 250;         % Number of iterations
+k_num = 5;          % Number of "spikes"
 
 %% Generate Artificial Test Data %%
 %-Generate artificial activation map
@@ -20,7 +20,7 @@ activation_map = zeros(1, samples_num);
 activation_map(xi) = 1;
 
 %-Assign truth parameters for the kernel
-p = [1, 1.5, -2];
+p = [2, 1.5, -1];
 
 %-Integration factors
 dp = 0.01 * ones(1,3);
@@ -41,7 +41,8 @@ tp = 0.7/(norm(Y,'fro').^2); % Think about this
 %       - d: kernel function
 
 %- Initialize variables:
-p_task = zeros(1,length(p)) + 1;
+% p_task = zeros(1,length(p)) + 0.5;
+p_task = [3 10 3];
 Yhat = zeros(1,samples_num);
 error = zeros(1,niter);
 for i = 1:niter
@@ -64,8 +65,9 @@ for i = 1:niter
     end
     
     %Project onto correct subspace
-    p_task(1) = max(1e-14, p_task(1));      %assuming lpsf
-    p_task(2) = max(1e-14, p_task(2));      %assuming lpsf
+    p_task(1) = max(1e-10, p_task(1));      %assuming lpsf
+    p_task(2) = max(1e-10, p_task(2));      %assuming lpsf
+    p_task(3) = min(-1e-10, p_task(3));
     
     disp(['==== Number of iterations :', num2str(i), ' ====']);
     disp(['Objective: ', num2str(e)]);
