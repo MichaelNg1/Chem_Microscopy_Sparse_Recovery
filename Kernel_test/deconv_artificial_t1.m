@@ -1,5 +1,5 @@
 %% [Description] This script attempts to find the kernel parameters given the kernel
-%shape and the activation map.
+%shape and the activation map. This script looks at single lines (no line integration)
 
 clear all;
 %-Add the path for original lpsf function
@@ -67,7 +67,6 @@ for i = 1:niter
     p_task(1) = max(1e-14, p_task(1));      %assuming lpsf
     p_task(2) = max(1e-14, p_task(2));      %assuming lpsf
     
-    %-TODO: Update stepsize
     disp(['==== Number of iterations :', num2str(i), ' ====']);
     disp(['Objective: ', num2str(e)]);
     disp(['p_test: ', num2str(p_task)]);
