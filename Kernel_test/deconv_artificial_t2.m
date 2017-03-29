@@ -26,11 +26,20 @@ p = [1, 1.5, -2];
 dp = 0.01 * ones(1,3);
 
 %-Functions to generate observation and objective
-gen_y = @(kernel, x, map, p) conv(kernel(p,x), map, 'same');
-objective = @(Yhat, Y) norm(Yhat - Y,2)^2;
+gen_y = @(kernel, range, map, p) conv(kernel(p, range), map, 'same');
+objective = @(Yhat, Y) 0.5*norm(Yhat - Y,2)^2;
+
+%-Construct adjoint 
+CDf = convmtx(kernel(p, range), length(range));
+% objective_adj  = @(map) CDF'*
 
 %-Generate observation
 Y = gen_y(kernel, range, activation_map, p);
+
+Y_mat = activation_map*CDf;
+dl = floor(length(range)/2) + 1;
+dr = ceil(length(range)/2) + 1;
+Y_mat = Y_mat(1,dl:(length(Y_mat) - dr));
 
 %-Gradient Step size initialization
 tp = 0.7/(norm(Y,'fro').^2); % Think about this
