@@ -6,10 +6,10 @@ clear all;
 addpath('..\Chem_microscopy_code');
 
 %% Constants %%
-samples_num = 128;  % Number of samples
+samples_num = 256;  % Number of samples
 kernel = @lpsf;     % Kernel used
-niter = 100;         % Number of iterations
-k_num = 4;          % Number of "spikes"
+niter = 250;         % Number of iterations
+k_num = 7;          % Number of "spikes"
 
 %% Generate Artificial Test Data %%
 %-Generate artificial activation map
@@ -29,20 +29,25 @@ dp = 0.01 * ones(1,3);
 gen_y = @(kernel, range, map, p) conv(kernel(p, range), map, 'same');
 objective = @(Yhat, Y) 0.5*norm(Yhat - Y,2)^2;
 
-%-Construct adjoint 
-CDf = convmtx(kernel(p, range), length(range));
-% objective_adj  = @(map) CDF'*
-
 %-Generate observation
 Y = gen_y(kernel, range, activation_map, p);
 
-Y_mat = activation_map*CDf;
+%-Construct adjoint 
+CDf = convmtx(kernel(p, range), length(range));
 dl = floor(length(range)/2) + 1;
-dr = ceil(length(range)/2) + 1;
-Y_mat = Y_mat(1,dl:(length(Y_mat) - dr));
+dr = ceil(length(range)/2);
+conv_resize = dl:(2*length(range) - dr);
+
+Y_mat = activation_map*CDf;
+Y_mat_resize = Y_mat(1, conv_resize);      %Should be identitcal
+
+obj_adj_long = @(map, range, p) (map*convmtx(kernel(p, range), length(range)) - Y_mat) ...
+*convmtx(kernel(p, range), length(range))';
+% obj_adj = @(map) obj_adj_long(map)(1,conv_resize);
 
 %-Gradient Step size initialization
 tp = 0.7/(norm(Y,'fro').^2); % Think about this
+tx = tp; % Change this to Lipschitz
 
 %% (TASK 1) Estimate p given xi %%
 % For this task the objective function used will be:
@@ -51,10 +56,11 @@ tp = 0.7/(norm(Y,'fro').^2); % Think about this
 
 %- Initialize variables:
 p_task = zeros(1,length(p)) + 1;
+x_task = zeros(1,length(activation_map)) + 1;
 Yhat = zeros(1,samples_num);
 error = zeros(1,niter);
 for i = 1:niter
-    Yhat = gen_y(kernel, range, activation_map, p_task);
+    Yhat = gen_y(kernel, range, x_task, p_task);
     e = objective(Yhat, Y);
     error(i) = e;
     
@@ -63,18 +69,23 @@ for i = 1:niter
     for k = 1:length(p_task)
         ek = zeros(size(p_task));
         ek(k) = 1;
-        Yhat_eps = gen_y(kernel, range, activation_map, p_task + dp.*ek);
+        Yhat_eps = gen_y(kernel, range, x_task, p_task + dp.*ek);
         Jp{k} = (Yhat_eps - Yhat) / dp(k);
     end
     
-    %Gradient step
+    %Gradient step in p
     for k = 1:length(p_task)
         p_task(k) = p_task(k) - tp*sum(sum(Jp{k}.*(Yhat - Y)));
     end
     
+    %Gradient step in x
+    grad_f = obj_adj_long(x_task, range, p_task);
+    x_task = x_task - tx*grad_f;
+
     %Project onto correct subspace
-    p_task(1) = max(1e-14, p_task(1));      %assuming lpsf
-    p_task(2) = max(1e-14, p_task(2));      %assuming lpsf
+    p_task(1) = max(1e-10, p_task(1));      %assuming lpsf
+    p_task(2) = max(1e-10, p_task(2));      %assuming lpsf
+    p_task(3) = min(-1e-10, p_task(3));     %assuming lpsf
     
     disp(['==== Number of iterations :', num2str(i), ' ====']);
     disp(['Objective: ', num2str(e)]);
@@ -85,7 +96,7 @@ end
 %% Visualization %%
 figure(1); clf;
 
-subplot(3,1,1);
+subplot(4,1,1);
 hold on;
 plot(range, Y);
 plot(range, Yhat);
@@ -93,13 +104,22 @@ legend('Truth', 'Learned');
 title('Truth vs. Learned');
 hold off;
 
-subplot(3,1,2);
+subplot(4,1,2);
 plot(error);
 xlabel('Number of Iterations');
 ylabel('Error');
 title('Objective Value');
 
-subplot(3,1,3);
+subplot(4,1,3);
 plot(kernel(p_task,range));
 title('Kernel Shape');
+
+subplot(4,1,4);
+hold on;
+plot(activation_map);
+plot(x_task);
+legend('Truth', 'Learned');
+hold off;
+title('Learned Activation Map');
+
 

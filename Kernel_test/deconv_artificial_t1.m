@@ -67,7 +67,7 @@ for i = 1:niter
     %Project onto correct subspace
     p_task(1) = max(1e-10, p_task(1));      %assuming lpsf
     p_task(2) = max(1e-10, p_task(2));      %assuming lpsf
-    p_task(3) = min(-1e-10, p_task(3));
+    p_task(3) = min(-1e-10, p_task(3));     %assuming lpsf
     
     disp(['==== Number of iterations :', num2str(i), ' ====']);
     disp(['Objective: ', num2str(e)]);
