@@ -6,10 +6,10 @@ clear all;
 addpath('..\Chem_microscopy_code');
 
 %% Constants %%
-samples_num = 256;  % Number of samples
+samples_num = 128;  % Number of samples
 kernel = @lpsf;     % Kernel used
 niter = 250;         % Number of iterations
-k_num = 7;          % Number of "spikes"
+k_num = 10;          % Number of "spikes"
 
 %% Generate Artificial Test Data %%
 %-Generate artificial activation map
@@ -26,41 +26,41 @@ p = [1, 1.5, -2];
 dp = 0.01 * ones(1,3);
 
 %-Functions to generate observation and objective
-gen_y = @(kernel, range, map, p) conv(kernel(p, range), map, 'same');
-objective = @(Yhat, Y) 0.5*norm(Yhat - Y,2)^2;
+CDf = @(kernel, range, p) convmtx(kernel(p, range), length(range));
+gen_y = @(CDf, map) map * CDf;
 
-%-Generate observation
-Y = gen_y(kernel, range, activation_map, p);
-
-%-Construct adjoint 
-CDf = convmtx(kernel(p, range), length(range));
 dl = floor(length(range)/2) + 1;
 dr = ceil(length(range)/2);
 conv_resize = dl:(2*length(range) - dr);
+objective = @(Yhat, Y) 0.5*norm(Yhat - Y,2)^2;
 
-Y_mat = activation_map*CDf;
-Y_mat_resize = Y_mat(1, conv_resize);      %Should be identitcal
+%-Generate observation
+CDf_truth = CDf(kernel, range, p);
+Y_long = gen_y(CDf_truth, activation_map);
+Y = Y_long(1,conv_resize);
 
-obj_adj_long = @(map, range, p) (map*convmtx(kernel(p, range), length(range)) - Y_mat) ...
-*convmtx(kernel(p, range), length(range))';
-% obj_adj = @(map) obj_adj_long(map)(1,conv_resize);
+obj_adj = @(map, CDf) (map*CDf - Y_long) * CDf';
 
 %-Gradient Step size initialization
 tp = 0.7/(norm(Y,'fro').^2); % Think about this
 tx = tp; % Change this to Lipschitz
 
-%% (TASK 1) Estimate p given xi %%
+%% (TASK 2) Estimate p and x %%
 % For this task the objective function used will be:
-% min || sum_(xi) d(x - xi)(p) - y ||_2
+% min 0.5 * || D(p) * x - y ||_2 ^2
 %       - d: kernel function
 
 %- Initialize variables:
 p_task = zeros(1,length(p)) + 1;
 x_task = zeros(1,length(activation_map)) + 1;
+
 Yhat = zeros(1,samples_num);
 error = zeros(1,niter);
 for i = 1:niter
-    Yhat = gen_y(kernel, range, x_task, p_task);
+    CDf_task = CDf(kernel, range, p_task);
+    Yhat_long = gen_y(CDf_task, x_task);
+    Yhat = Yhat_long(1, conv_resize);
+
     e = objective(Yhat, Y);
     error(i) = e;
     
@@ -69,7 +69,9 @@ for i = 1:niter
     for k = 1:length(p_task)
         ek = zeros(size(p_task));
         ek(k) = 1;
-        Yhat_eps = gen_y(kernel, range, x_task, p_task + dp.*ek);
+        CDf_task_eps = CDf(kernel, range, p_task + dp.*ek);
+        Yhat_eps_long = gen_y(CDf_task_eps, x_task);
+        Yhat_eps = Yhat_eps_long(1, conv_resize);
         Jp{k} = (Yhat_eps - Yhat) / dp(k);
     end
     
@@ -79,7 +81,7 @@ for i = 1:niter
     end
     
     %Gradient step in x
-    grad_f = obj_adj_long(x_task, range, p_task);
+    grad_f = obj_adj(x_task, CDf_task);
     x_task = x_task - tx*grad_f;
 
     %Project onto correct subspace
