@@ -1,5 +1,5 @@
 %% [Description] This script attempts to find the kernel parameters and activation map
-% Simply minimizes the L2 energy function
+% Attempts to use the L1 penalty to enforce sparsity in x
 
 clear all;
 %-Add the path for original lpsf function
@@ -9,7 +9,7 @@ addpath('..\Chem_microscopy_code');
 samples_num = 128;  % Number of samples
 kernel = @lpsf;     % Kernel used
 niter = 250;         % Number of iterations
-k_num = 10;          % Number of "spikes"
+k_num = 20;          % Number of "spikes"
 
 %% Generate Artificial Test Data %%
 %-Generate artificial activation map
@@ -20,7 +20,7 @@ activation_map = zeros(1, samples_num);
 activation_map(xi) = 1;
 
 %-Assign truth parameters for the kernel
-p = [1, 1, -2];
+p = [1, .5, -2];
 
 %-Integration factors
 dp = 0.01 * ones(1,3);
@@ -44,10 +44,11 @@ obj_adj = @(map, CDf) (map*CDf - Y_long) * CDf';
 %-Gradient Step size initialization
 tp = 0.7/(norm(Y,'fro').^2); % Think about this
 tx = tp; % Change this to Lipschitz
+lambda = 0.01;   % Change this to be tighter
 
-%% (TASK 2) Estimate p and x %%
+%% (TASK 3) Estimate p and x %%
 % For this task the objective function used will be:
-% min 0.5 * || D(p) * x - y ||_2 ^2
+% min 0.5 * || D(p) * x - y ||_2 ^2 + lambda ||x||_1
 %       - d: kernel function
 
 %- Initialize variables:
@@ -83,6 +84,7 @@ for i = 1:niter
     %Gradient step in x
     grad_f = obj_adj(x_task, CDf_task);
     x_task = x_task - tx*grad_f;
+    x_task = sign(x_task).*max(abs(x_task)-lambda*tx,0);
 
     %Project onto correct subspace
     p_task(1) = max(1e-10, p_task(1));      %assuming lpsf
