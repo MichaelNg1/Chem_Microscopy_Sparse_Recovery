@@ -123,5 +123,3 @@ plot(x_task);
 legend('Truth', 'Learned');
 hold off;
 title('Learned Activation Map');
-
-

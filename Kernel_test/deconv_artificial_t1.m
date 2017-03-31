@@ -95,4 +95,3 @@ title('Objective Value');
 subplot(3,1,3);
 plot(kernel(p_task,range));
 title('Kernel Shape');
-

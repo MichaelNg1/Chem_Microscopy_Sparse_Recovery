@@ -1,5 +1,6 @@
 %% [Description] This script attempts to find the kernel parameters and activation map
 % Attempts to use the L1 penalty to enforce sparsity in x
+% Instead of finding the activation map, the position of each kernel is determined (k)
 
 clear all;
 %-Add the path for original lpsf function
@@ -125,5 +126,3 @@ plot(x_task);
 legend('Truth', 'Learned');
 hold off;
 title('Learned Activation Map');
-
-
