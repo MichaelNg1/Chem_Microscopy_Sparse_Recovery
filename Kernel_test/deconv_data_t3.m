@@ -15,7 +15,7 @@ niter = 500;
 LAMBDA_SCALE = 0.5;
 
 %-Integration factors
-dp = 0.01 * ones(1,3);
+dp = 0.01 * ones(1,p_len);
 
 %-Functions to generate observation and objective
 CDf = @(kernel, range, p) convmtx(kernel(p, range), length(range));
@@ -24,7 +24,7 @@ gen_y = @(CDf, map) map * CDf;
 dl = floor(samples_num/2) + 1;
 dr = ceil(samples_num/2);
 conv_resize = dl:(2*samples_num - dr);
-objective = @(Yhat, Y) 0.5*norm(Yhat - Y,2)^2;
+objective = @(Yhat, Y) 0.5*norm(Yhat - Y,2)^2 + sum(abs(Yhat));
 
 %- Initialize variables:
 p_task = zeros(1,p_len) + 1;
