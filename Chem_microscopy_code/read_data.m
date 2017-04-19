@@ -12,7 +12,7 @@ DISPLAY_ADJOINT = 1;
 MODEL_TYPE = 'asym'; %'sym','asym'
 IS_RAWDATA = 0;
 LINE_INTEGRAL_METHOD = 'Fourier'; %-'Fourier','Direct'
-DATA_NUMBER = 4;
+DATA_NUMBER = 6;
 IS_DLENGTH_USERDEF = 0;
 
 pixelLength_mm = 30;

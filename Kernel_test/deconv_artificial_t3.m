@@ -10,7 +10,8 @@ addpath('..\Chem_microscopy_code');
 samples_num = 128;  % Number of samples
 kernel = @lpsf;     % Kernel used
 niter = 250;         % Number of iterations
-k_num = 20;          % Number of "spikes"
+k_num = 10;          % Number of "spikes"
+LAMBDA_CONST = 0.5;
 
 %% Generate Artificial Test Data %%
 %-Generate artificial activation map
@@ -21,7 +22,7 @@ activation_map = zeros(1, samples_num);
 activation_map(xi) = 1;
 
 %-Assign truth parameters for the kernel
-p = [1, .5, -2];
+p = [2, .5, -2];
 
 %-Integration factors
 dp = 0.01 * ones(1,3);
@@ -121,8 +122,8 @@ title('Kernel Shape');
 
 subplot(4,1,4);
 hold on;
-plot(activation_map);
-plot(x_task);
+stem(activation_map);
+stem(x_task);
 legend('Truth', 'Learned');
 hold off;
 title('Learned Activation Map');
