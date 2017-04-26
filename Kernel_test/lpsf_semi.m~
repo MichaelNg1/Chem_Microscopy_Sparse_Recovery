@@ -10,12 +10,12 @@ function y = lpsf_semi(p,x)
 
 %-Input Parameter Allocation
 xm = x(round(0.85*numel(x)/2)); %-Find 'mean' of x
-if numel(p) == 5
-    a=p(1); m=p(2); n=p(3); b=p(4); c=p(5);
-elseif numel(p) == 4
-    a=p(1); m=p(2); n=p(3); b=p(4);   c=1;
+if numel(p) == 4
+    a=p(1); n=p(2); b=p(3); c=p(4);
 elseif numel(p) == 3
-    a=p(1); m=p(2); n=p(3); b=xm;   c=1;
+    a=p(1); n=p(2); b=p(3);   c=1;
+elseif numel(p) == 2
+    a=p(1); n=p(2); b=xm;   c=1;
     error('Invalid Parameter Dimension')
 end
 
@@ -27,12 +27,12 @@ s = 0:dd:max(x); %-Integrating variable
 %-Convolution with integral
 y = zeros(size(x));
 for I = 1:numel(x)
-    y(I) = c*sum( sqrt(max(0, m^2 - (m^2 / a^2) * (x(I) - b - s).^2)).*((s+1).^n)  )*dd;
+    y(I) = c*sum( sqrt(max(0, a^2 - (x(I) - b - s).^2)).*((s+1).^n)  )*dd;
 end
 
 
 %-Scaling y
-if numel(p) ~= 5
+if numel(p) ~= 4
     y = y/(sum(y)*dd); % Integral of y = 1
 end
     

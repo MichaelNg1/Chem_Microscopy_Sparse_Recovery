@@ -9,9 +9,8 @@ addpath('../Chem_microscopy_code');
 [samples_num, lines_num] = size(RY);
 range = 1:samples_num;
 kernel = @lpsf_semi;     % Kernel used
-p_len = 4;
 % kernel = @lpsf;
-% p_len = 5;
+p_len = 5;
 k_sparse = 2;
 niter = 200;      
 
@@ -22,8 +21,8 @@ objective = @(Yhat, Y) 0.5*norm(Yhat - Y,2)^2;
 p_task = [];
 
 %-Use Good initializations:
-p_task(1,:) = [5, -2, 39, .005];
-p_task(2,:) = [5, -2, 59, .005];
+p_task(1,:) = [5, 5, -2, 39, .005];
+p_task(2,:) = [5, 5, -2, 59, .005];
 % p_task(1,:) = [.1, 2, -3, 39, 0.05];    % 'BEST FIT' LPSF
 % p_task(2,:) = [.1, 2, -3, 59, 0.05];    % 'BEST FIT' LPSF
 
@@ -32,8 +31,7 @@ Y = RY(:,2)';
 
 %-Gradient Step size initialization
 tp = 0.05/(norm(Y,'fro').^2) * ones(1, p_len);
-% tp(5) = 0.001;      % Super hacky... otherwise the scale blows up
-tp(4) = 0.001;
+tp(5) = 0.001;      % Super hacky... otherwise the scale blows up
 dp = 0.01 * ones(1, size(p_task,2)); 
 
 %% (TASK 4) Estimate p %%
@@ -73,19 +71,13 @@ for i = 1:niter
             p_task(j,k) = p_task(j,k) - change;
         end
     end
-
-    %Project onto correct subspace ASSUMING LPSF_SEMI
-    p_task(:,1) = max(1e-3, p_task(:,1));      
-    p_task(:,2) = min(-1e-3, p_task(:,2));     
-    p_task(:,3) = max(1e-3, p_task(:,3));
-    p_task(:,4) = max(1e-5, p_task(:,4));    
    
-    %Project onto correct subspace ASSUMING LPSF
-    %p_task(:,1) = max(1e-3, p_task(:,1));
-    %p_task(:,2) = max(1e-3, p_task(:,2));
-    %p_task(:,3) = min(-1e-3, p_task(:,3));
-    %p_task(:,4) = max(1e-3, p_task(:,4));
-    %p_task(:,5) = max(1e-5, p_task(:,5));
+    %Project onto correct subspace ASSUMING LPSF(_semi)
+    p_task(:,1) = max(1e-3, p_task(:,1));
+    p_task(:,2) = max(1e-3, p_task(:,2));
+    p_task(:,3) = min(-1e-3, p_task(:,3));
+    p_task(:,4) = max(1e-3, p_task(:,4));
+    p_task(:,5) = max(1e-5, p_task(:,5));
 
     disp(['==== Number of iterations :', num2str(i), ' ====']);
     disp(['Objective: ', num2str(e)]);
