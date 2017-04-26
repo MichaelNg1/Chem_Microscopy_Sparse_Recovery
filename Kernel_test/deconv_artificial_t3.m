@@ -4,7 +4,7 @@
 
 clear all;
 %-Add the path for original lpsf function
-addpath('..\Chem_microscopy_code');
+addpath('../Chem_microscopy_code');
 
 %% Constants %%
 samples_num = 128;  % Number of samples

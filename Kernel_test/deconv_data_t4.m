@@ -3,32 +3,38 @@ function [ ] = deconv_data_t4( RY )
 %   Detailed explanation goes here
 
 %-Add the path for original lpsf function
-addpath('..\Chem_microscopy_code');
+addpath('../Chem_microscopy_code');
 
 %% Constants %%
 [samples_num, lines_num] = size(RY);
 range = 1:samples_num;
-kernel = @lpsf;     % Kernel used
-p_len = 5;
+kernel = @lpsf_semi;     % Kernel used
+p_len = 4;
+% kernel = @lpsf;
+% p_len = 5;
 k_sparse = 2;
-niter = 50;      
-% Number of iterations
-LAMBDA_SCALE = 0.5;
-
-%-Integration factors
-dp = 0.01 * ones(1,p_len);
+niter = 200;      
 
 %-Functions to generate observation and objective
-objective = @(Yhat, Y) 0.5*norm(Yhat - Y,2)^2 + sum(abs(Yhat));
+objective = @(Yhat, Y) 0.5*norm(Yhat - Y,2)^2;
 
 %- Initialize variables:
-p_task = zeros(k_sparse ,p_len) + 1;
+p_task = [];
+
+%-Use Good initializations:
+p_task(1,:) = [5, -2, 39, .005];
+p_task(2,:) = [5, -2, 59, .005];
+% p_task(1,:) = [.1, 2, -3, 39, 0.05];    % 'BEST FIT' LPSF
+% p_task(2,:) = [.1, 2, -3, 59, 0.05];    % 'BEST FIT' LPSF
 
 %-Take a single line as truth
 Y = RY(:,2)';
 
 %-Gradient Step size initialization
-tp = 0.5/(norm(Y,'fro').^2);
+tp = 0.05/(norm(Y,'fro').^2) * ones(1, p_len);
+% tp(5) = 0.001;      % Super hacky... otherwise the scale blows up
+tp(4) = 0.001;
+dp = 0.01 * ones(1, size(p_task,2)); 
 
 %% (TASK 4) Estimate p %%
 % For this task the objective function used will be:
@@ -48,33 +54,43 @@ for i = 1:niter
     %Estimate Jacobian
     Jp = cell(size(p_task));
     for j = 1:size(p_task,1)
-        for k = 1:size(p_task,2)
+        for k = 1:p_len
             ek = zeros(size(p_task));
             ek(j,k) = 1;
             Yhat_eps = zeros(1,samples_num);
             for l = 1:k_sparse
-                Yhat_eps = Yhat_eps + kernel(p_task(j,:) + dp.*ek(l,:) , range);
+                Yhat_eps = Yhat_eps + kernel(p_task(l,:) + dp.*ek(l,:) , range);
             end
             Jp{j,k} = (Yhat_eps - Yhat) / dp(k);
         end
     end
     
+
     %Gradient step in p
     for j = 1:size(p_task,1)
-        for k = 1:size(p_task,2)
-            p_task(j,k) = p_task(j,k) - tp*sum(sum(Jp{j,k}.*(Yhat - Y)));
+        for k = 1:p_len
+            change = tp(k)*sum(sum(Jp{j,k}.*(Yhat - Y)));
+            p_task(j,k) = p_task(j,k) - change;
         end
     end
 
-    %Project onto correct subspace
-    p_task(1) = max(1e-1, p_task(1));      %assuming lpsf
-    p_task(2) = max(1e-1, p_task(2));      %assuming lpsf
-    p_task(3) = min(-1e-1, p_task(3));     %assuming lpsf
-    
+    %Project onto correct subspace ASSUMING LPSF_SEMI
+    p_task(:,1) = max(1e-3, p_task(:,1));      
+    p_task(:,2) = min(-1e-3, p_task(:,2));     
+    p_task(:,3) = max(1e-3, p_task(:,3));
+    p_task(:,4) = max(1e-5, p_task(:,4));    
+   
+    %Project onto correct subspace ASSUMING LPSF
+    %p_task(:,1) = max(1e-3, p_task(:,1));
+    %p_task(:,2) = max(1e-3, p_task(:,2));
+    %p_task(:,3) = min(-1e-3, p_task(:,3));
+    %p_task(:,4) = max(1e-3, p_task(:,4));
+    %p_task(:,5) = max(1e-5, p_task(:,5));
+
     disp(['==== Number of iterations :', num2str(i), ' ====']);
     disp(['Objective: ', num2str(e)]);
     disp(['p_test (1): ', num2str(p_task(1,:))]);
-    
+    disp(['p_test (2): ', num2str(p_task(2,:))]); 
 end
 
 %% Visualization %%
