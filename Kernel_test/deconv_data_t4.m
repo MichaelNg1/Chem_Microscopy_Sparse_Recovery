@@ -8,30 +8,44 @@ addpath('../Chem_microscopy_code');
 %% Constants %%
 [samples_num, lines_num] = size(RY);
 range = 1:samples_num;
-kernel = @lpsf_semi;     % Kernel used
-% kernel = @lpsf;
-p_len = 5;
-k_sparse = 2;
-niter = 200;      
+% kernel = @lpsf_semi;     % Kernel used
+kernel = @lpsf;
+p_len = 5;                  % number of kernel parameters
+p_eps = 0.07;
+k_sparse = 3;               % number of peaks
+niter = 1000;      
 
 %-Functions to generate observation and objective
 objective = @(Yhat, Y) 0.5*norm(Yhat - Y,2)^2;
 
-%- Initialize variables:
-p_task = [];
+%-Take a single line as truth
+Y = RY(:,3)';
 
-%-Use Good initializations:
-p_task(1,:) = [5, 5, -2, 39, .005];
-p_task(2,:) = [5, 5, -2, 59, .005];
+%- Initialize variables:
+p_shape = [.05, 2, -3];
+p_scale = [.05];
+
+dY = Y(2:end) - Y(1:end-1);
+dY_index = find(abs(dY)/norm(dY,2) > p_eps);
+Y_cand = Y;
+Y_cand(dY_index) = 0;
+[~,I] = sort(Y_cand);
+p_loc = I( (end - k_sparse + 1): end);
+
+%-Use Good initializations: (for a specific sample...)
+% p_task(1,:) = [5, 5, -2, 39, .005];
+% p_task(2,:) = [5, 5, -2, 59, .005];
 % p_task(1,:) = [.1, 2, -3, 39, 0.05];    % 'BEST FIT' LPSF
 % p_task(2,:) = [.1, 2, -3, 59, 0.05];    % 'BEST FIT' LPSF
 
-%-Take a single line as truth
-Y = RY(:,2)';
+%-Use 'automatic' parameters:
+for i = 1:k_sparse
+    p_task(i,:) = [p_shape, p_loc(i), p_scale];
+end
+% p_task(2,4) = 64;
 
-%-Gradient Step size initialization
-tp = 0.05/(norm(Y,'fro').^2) * ones(1, p_len);
-tp(5) = 0.001;      % Super hacky... otherwise the scale blows up
+%-Gradient Step size + Jacobian differential
+tp_scale = 0.2;
 dp = 0.01 * ones(1, size(p_task,2)); 
 
 %% (TASK 4) Estimate p %%
@@ -67,7 +81,7 @@ for i = 1:niter
     %Gradient step in p
     for j = 1:size(p_task,1)
         for k = 1:p_len
-            change = tp(k)*sum(sum(Jp{j,k}.*(Yhat - Y)));
+            change = (tp_scale/norm(Jp{j,k},'fro'))*sum(sum(Jp{j,k}.*(Yhat - Y)));
             p_task(j,k) = p_task(j,k) - change;
         end
     end
@@ -81,8 +95,9 @@ for i = 1:niter
 
     disp(['==== Number of iterations :', num2str(i), ' ====']);
     disp(['Objective: ', num2str(e)]);
-    disp(['p_test (1): ', num2str(p_task(1,:))]);
-    disp(['p_test (2): ', num2str(p_task(2,:))]); 
+    for j = 1:k_sparse
+        disp(['p_test (',num2str(j),'): ', num2str(p_task(j,:))]);
+    end
 end
 
 %% Visualization %%
