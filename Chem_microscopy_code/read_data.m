@@ -12,7 +12,7 @@ DISPLAY_ADJOINT = 1;
 MODEL_TYPE = 'asym'; %'sym','asym'
 IS_RAWDATA = 0;
 LINE_INTEGRAL_METHOD = 'Fourier'; %-'Fourier','Direct'
-DATA_NUMBER = 6;
+DATA_NUMBER = 7;
 IS_DLENGTH_USERDEF = 0;
 
 pixelLength_mm = 30;
@@ -117,7 +117,7 @@ end
 clear dataRawI;
 
 
-%-Flip lines, fix angle of slope fitting [-90°,90°]
+%-Flip lines, fix angle of slope fitting [-90ï¿½,90ï¿½]
 angles_deg = mod(angles_deg,360);
 lineDirection = zeros(nlines,1);
 for I = 1:nlines
