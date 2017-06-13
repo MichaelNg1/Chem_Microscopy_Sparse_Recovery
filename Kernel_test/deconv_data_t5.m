@@ -12,14 +12,14 @@ range = 1:samples_num;
 kernel = @lpsf;
 p_len = 5;                  % number of kernel parameters
 p_eps = 0.06;
-niter = 50;      
-LAMBDA_SCALE = 0.1;
+niter = 25;      
+LAMBDA_SCALE = 0.5;
 
 %-Functions to generate observation and objective
 objective = @(Yhat, Y) 0.5*norm(Yhat - Y,2)^2;
 
 %-Take a single line as truth
-Y = RY(:,1)';
+Y = RY(:,2)';
 
 %- Initialize variables:
 p_shape = [.05, 2, -3];
@@ -37,6 +37,9 @@ tp_scale(4) = 0;
 tp_scale(5) = 0.05;
 
 dp = 0.01 * ones(1, size(p_task,2)); 
+
+tx = 0.05;
+lambda = LAMBDA_SCALE*max(max(abs(Y)));
 
 %% (TASK 4) Estimate p %%
 % For this task the objective function used will be:
@@ -72,6 +75,9 @@ for i = 1:niter
     for j = 1:size(p_task,1)
         for k = 1:p_len
             p_task(j,k) = p_task(j,k) - delta(j,k);
+            if k == 5
+                p_task(j,k) = sign(p_task(j,k)).*max(abs(p_task(j,k))-lambda*tx,0);
+            end
         end
     end
    
