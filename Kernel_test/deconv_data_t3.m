@@ -3,7 +3,8 @@ function [ ] = deconv_data_t3( RY )
 %   Detailed explanation goes here
 
 %-Add the path for original lpsf function
-addpath('..\Chem_microscopy_code');
+
+
 
 %% Constants %%
 [samples_num, lines_num] = size(RY);
@@ -12,7 +13,7 @@ kernel = @lpsf;     % Kernel used
 p_len = 3;
 niter = 500;      
 % Number of iterations
-LAMBDA_SCALE = 0.5;
+LAMBDA_SCALE = 0.1;
 
 %-Integration factors
 dp = 0.01 * ones(1,p_len);
@@ -24,10 +25,10 @@ gen_y = @(CDf, map) map * CDf;
 dl = floor(samples_num/2) + 1;
 dr = ceil(samples_num/2);
 conv_resize = dl:(2*samples_num - dr);
-objective = @(Yhat, Y) 0.5*norm(Yhat - Y,2)^2 + sum(abs(Yhat));
+objective = @(Yhat, Y) 0.5*norm(Yhat - Y,2)^2 + LAMBDA_SCALE * sum(abs(Yhat));
 
 %- Initialize variables:
-p_task = zeros(1,p_len) + 1;
+p_task = [.05, 2, -3];
 x_task = zeros(1,samples_num) + .05;
 
 %-Take a single line as truth
@@ -37,7 +38,8 @@ Y_long = [zeros(1, dl-1), Y, zeros(1, dr-1) ];
 obj_adj = @(map, CDf) (map*CDf - Y_long) * CDf';
 
 %-Gradient Step size initialization
-tp = 0.7/(norm(Y,'fro').^2);
+% tp = 0.7/(norm(Y,'fro').^2);
+tp_scale = 1 * ones(1,p_len);
 CDf_init = CDf(kernel, range, p_task);
 
 Z = randn(1, samples_num);
@@ -79,10 +81,12 @@ for i = 1:niter
     
     %Gradient step in p
     for k = 1:length(p_task)
-        p_task(k) = p_task(k) - tp*sum(sum(Jp{k}.*(Yhat - Y)));
+        step = (tp_scale(k)/(norm(Jp{k},'fro')));
+        p_task(k) = p_task(k) - step*sum(sum(Jp{k}.*(Yhat - Y)));
     end
     
     %Gradient step in x
+    CDf_task = CDf(kernel, range, p_task); % Need to take into account updated p
     grad_f = obj_adj(x_task, CDf_task);
     x_task = x_task - tx*grad_f;
     x_task = sign(x_task).*max(abs(x_task)-lambda*tx,0);

@@ -11,7 +11,7 @@ range = 1:samples_num;
 % kernel = @lpsf_semi;     % Kernel used
 kernel = @lpsf;
 p_len = 5;                  % number of kernel parameters
-p_eps = 0.07;
+p_eps = 0.06;
 k_sparse = 6;               % number of peaks
 niter = 200;      
 
@@ -19,18 +19,26 @@ niter = 200;
 objective = @(Yhat, Y) 0.5*norm(Yhat - Y,2)^2;
 
 %-Take a single line as truth
-Y = RY(:,2)';
+Y = RY(:,3)';
 
 %- Initialize variables:
 p_shape = [.05, 2, -3];
 p_scale = [.05];
 
 dY = Y(2:end) - Y(1:end-1);
+ddY = dY(2:end) - dY(1:end-1);
 dY_index = find(abs(dY)/norm(dY,2) > p_eps);
+ddY_index = find(ddY >= 0);
 Y_cand = Y;
 Y_cand(dY_index) = 0;
+Y_cand(ddY_index) = 0;
 [~,I] = sort(Y_cand);
 p_loc = I( (end - k_sparse + 1): end);
+% p_loc(1) = 125;
+% p_loc(3) = 130;
+% p_loc(4) = 51;
+% p_loc(7) = 59;
+
 
 %-Use Good initializations: (for a specific sample...)
 % p_task(1,:) = [5, 5, -2, 39, .005];
@@ -46,7 +54,7 @@ end
 
 %-Gradient Step size + Jacobian differential
 tp_scale = 0.05 * ones(1, size(p_task,2));
-tp_scale(4) = 50;
+tp_scale(4) = 75;
 tp_scale(5) = 0.05;
 
 dp = 0.01 * ones(1, size(p_task,2)); 
