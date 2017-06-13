@@ -12,13 +12,13 @@ range = 1:samples_num;
 kernel = @lpsf;
 p_len = 5;                  % number of kernel parameters
 p_eps = 0.06;
-niter = 150;      
+niter = 200;      
 LAMBDA_SCALE = 0.5;
 
 
 
 %-Take a single line as truth
-Y = RY(:,5)';
+Y = RY(:,1)';
 
 %- Initialize variables:
 p_shape = [.05, 2, -3];
@@ -49,16 +49,31 @@ objective = @(Yhat, Y, p) 0.5*norm(Yhat - Y,2)^2 + lambda * norm(p(:,5),1);
 %       - d: kernel function
 Yhat = zeros(1,samples_num);
 error = zeros(1,niter);
+scale_step = zeros(1,niter);
 for i = 1:niter
     Yhat = zeros(1,samples_num);
+    Yhat_mat = zeros(samples_num, samples_num);
     for j = 1:samples_num
-        Yhat = Yhat + kernel(p_task(j,:), range);
+        Yhat_mat(j,:) = kernel(p_task(j,:), range);
+        Yhat = Yhat + Yhat_mat(j,:);
     end
 
     %Update Parameters
     lambda = LAMBDA_SCALE*max(max(abs(Yhat)));
     
-
+    if (mod(i,3) == 0)
+        Z = randn(samples_num,1);
+        Z = Z/norm(Z,'fro');
+        for iiter = 1:20
+            Z = (Yhat_mat * (Yhat_mat' * Z));
+            Z = Z/norm(Z,'fro'); 
+        end
+        Lip = 2*norm(Yhat_mat * (Yhat_mat' * Z),'fro');
+        tx = 0.0002/Lip;
+        tp_scale(5) = tx;
+        
+    end
+    scale_step(i) = tx;
     e = objective(Yhat, Y, p_task);
     error(i) = e;
     
@@ -80,9 +95,11 @@ for i = 1:niter
     %Gradient step in p
     for j = 1:size(p_task,1)
         for k = 1:p_len
-            p_task(j,k) = p_task(j,k) - delta(j,k);
             if k == 5
+                p_task(j,k) = p_task(j,k) - tp_scale(k) * sum(sum(Jp{j,k}.*(Yhat - Y)));
                 p_task(j,k) = sign(p_task(j,k)).*max(abs(p_task(j,k))-lambda*tx,0);
+            else
+                p_task(j,k) = p_task(j,k) - delta(j,k);
             end
         end
     end
@@ -106,7 +123,7 @@ end
 %% Visualization %%
 figure(1); clf;
 
-subplot(3,1,1);
+subplot(4,1,1);
 hold on;
 plot(range, Y);
 plot(range, Yhat);
@@ -114,17 +131,23 @@ legend('Truth', 'Learned');
 title('Truth vs. Learned');
 hold off;
 
-subplot(3,1,2);
-plot(error(2:end));
+subplot(4,1,2);
+plot(scale_step);
 xlabel('Number of Iterations');
-ylabel('Error');
-title('Objective Value');
+ylabel('Step Value');
+title('Step Scale');
 
-subplot(3,1,3);
+subplot(4,1,3);
 stem(p_task(:,5));
 xlabel('Magnitude');
 ylabel('Location');
 title('Learned Activation Map');
+
+subplot(4,1,4);
+plot(error(2:end));
+xlabel('Number of Iterations');
+ylabel('Error');
+title('Objective Value');
 
 end
 
