@@ -12,14 +12,13 @@ range = 1:samples_num;
 kernel = @lpsf;
 p_len = 5;                  % number of kernel parameters
 p_eps = 0.06;
-niter = 25;      
+niter = 150;      
 LAMBDA_SCALE = 0.5;
 
-%-Functions to generate observation and objective
-objective = @(Yhat, Y) 0.5*norm(Yhat - Y,2)^2;
+
 
 %-Take a single line as truth
-Y = RY(:,2)';
+Y = RY(:,5)';
 
 %- Initialize variables:
 p_shape = [.05, 2, -3];
@@ -32,14 +31,17 @@ end
 % p_task(2,4) = 64;
 
 %-Gradient Step size + Jacobian differential
-tp_scale = 0.05 * ones(1, size(p_task,2));
+tp_scale = 0.1 * ones(1, size(p_task,2));
 tp_scale(4) = 0;
-tp_scale(5) = 0.05;
+tp_scale(5) = 0.1;
 
 dp = 0.01 * ones(1, size(p_task,2)); 
 
 tx = 0.05;
 lambda = LAMBDA_SCALE*max(max(abs(Y)));
+
+%-Functions to generate observation and objective
+objective = @(Yhat, Y, p) 0.5*norm(Yhat - Y,2)^2 + lambda * norm(p(:,5),1);
 
 %% (TASK 4) Estimate p %%
 % For this task the objective function used will be:
@@ -53,7 +55,11 @@ for i = 1:niter
         Yhat = Yhat + kernel(p_task(j,:), range);
     end
 
-    e = objective(Yhat, Y);
+    %Update Parameters
+    lambda = LAMBDA_SCALE*max(max(abs(Yhat)));
+    
+
+    e = objective(Yhat, Y, p_task);
     error(i) = e;
     
     %Estimate Jacobian
@@ -86,12 +92,14 @@ for i = 1:niter
     p_task(:,2) = max(1e-3, p_task(:,2));
     p_task(:,3) = min(-1e-3, p_task(:,3));
     p_task(:,4) = max(1e-3, p_task(:,4));
-    p_task(:,5) = max(1e-5, p_task(:,5));
+    p_task(:,5) = max(1e-12, p_task(:,5));
 
     disp(['==== Number of iterations :', num2str(i), ' ====']);
     disp(['Objective: ', num2str(e)]);
     for j = 1:size(p_task,1)
-        disp(['p_test (',num2str(j),'): ', num2str(p_task(j,:))]);
+        if(p_task(j,5) > 1e-5)
+            disp(['p_test (',num2str(j),'): ', num2str(p_task(j,:))]);
+        end
     end
 end
 
@@ -107,7 +115,7 @@ title('Truth vs. Learned');
 hold off;
 
 subplot(3,1,2);
-plot(error);
+plot(error(2:end));
 xlabel('Number of Iterations');
 ylabel('Error');
 title('Objective Value');

@@ -11,9 +11,9 @@ function [ ] = deconv_data_t3( RY )
 range = 1:samples_num;
 kernel = @lpsf;     % Kernel used
 p_len = 3;
-niter = 500;      
+niter = 1000;      
 % Number of iterations
-LAMBDA_SCALE = 0.1;
+LAMBDA_SCALE = 0.5;
 
 %-Integration factors
 dp = 0.01 * ones(1,p_len);
