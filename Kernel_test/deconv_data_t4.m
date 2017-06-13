@@ -12,7 +12,7 @@ range = 1:samples_num;
 kernel = @lpsf;
 p_len = 5;                  % number of kernel parameters
 p_eps = 0.06;
-k_sparse = 6;               % number of peaks
+k_sparse = 3;               % number of peaks
 niter = 200;      
 
 %-Functions to generate observation and objective
@@ -76,15 +76,16 @@ for i = 1:niter
     
     %Estimate Jacobian
     Jp = cell(size(p_task));
-    for j = 1:size(p_task,1)
+    parfor j = 1:size(p_task,1)
         for k = 1:p_len
             ek = zeros(size(p_task));
             ek(j,k) = 1;
             Yhat_eps = zeros(1,samples_num);
-            for l = 1:k_sparse
-                Yhat_eps = Yhat_eps + kernel(p_task(l,:) + dp.*ek(l,:) , range);
-            end
+
+            Yhat_eps = Yhat + kernel(p_task(j,:) + dp.*ek(j,:) , range) ...
+                        - kernel(p_task(j,:), range);
             Jp{j,k} = (Yhat_eps - Yhat) / dp(k);
+            delta(j,k) = (tp_scale(k)/(norm(Jp{j,k},'fro')))*sum(sum(Jp{j,k}.*(Yhat - Y)));
         end
     end
     
@@ -92,8 +93,7 @@ for i = 1:niter
     %Gradient step in p
     for j = 1:size(p_task,1)
         for k = 1:p_len
-            change = (tp_scale(k)/(norm(Jp{j,k},'fro')))*sum(sum(Jp{j,k}.*(Yhat - Y)));
-            p_task(j,k) = p_task(j,k) - change;
+            p_task(j,k) = p_task(j,k) - delta(j,k);
         end
     end
    

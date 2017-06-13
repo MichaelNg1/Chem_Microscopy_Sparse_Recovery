@@ -11,42 +11,29 @@ range = 1:samples_num;
 % kernel = @lpsf_semi;     % Kernel used
 kernel = @lpsf;
 p_len = 5;                  % number of kernel parameters
-p_eps = 0.07;
-k_sparse = 6;               % number of peaks
-niter = 200;      
+p_eps = 0.06;
+niter = 50;      
+LAMBDA_SCALE = 0.1;
 
 %-Functions to generate observation and objective
 objective = @(Yhat, Y) 0.5*norm(Yhat - Y,2)^2;
 
 %-Take a single line as truth
-Y = RY(:,2)';
+Y = RY(:,1)';
 
 %- Initialize variables:
 p_shape = [.05, 2, -3];
 p_scale = [.05];
 
-dY = Y(2:end) - Y(1:end-1);
-dY_index = find(abs(dY)/norm(dY,2) > p_eps);
-Y_cand = Y;
-Y_cand(dY_index) = 0;
-[~,I] = sort(Y_cand);
-p_loc = I( (end - k_sparse + 1): end);
-
-%-Use Good initializations: (for a specific sample...)
-% p_task(1,:) = [5, 5, -2, 39, .005];
-% p_task(2,:) = [5, 5, -2, 59, .005];
-% p_task(1,:) = [.1, 2, -3, 39, 0.05];    % 'BEST FIT' LPSF
-% p_task(2,:) = [.1, 2, -3, 59, 0.05];    % 'BEST FIT' LPSF
-
 %-Use 'automatic' parameters:
-for i = 1:k_sparse
-    p_task(i,:) = [p_shape, p_loc(i), p_scale];
+for i = 1:samples_num
+    p_task(i,:) = [p_shape, range(i), p_scale];
 end
 % p_task(2,4) = 64;
 
 %-Gradient Step size + Jacobian differential
 tp_scale = 0.05 * ones(1, size(p_task,2));
-tp_scale(4) = 50;
+tp_scale(4) = 0;
 tp_scale(5) = 0.05;
 
 dp = 0.01 * ones(1, size(p_task,2)); 
@@ -59,7 +46,7 @@ Yhat = zeros(1,samples_num);
 error = zeros(1,niter);
 for i = 1:niter
     Yhat = zeros(1,samples_num);
-    for j = 1:k_sparse
+    for j = 1:samples_num
         Yhat = Yhat + kernel(p_task(j,:), range);
     end
 
@@ -68,15 +55,15 @@ for i = 1:niter
     
     %Estimate Jacobian
     Jp = cell(size(p_task));
-    for j = 1:size(p_task,1)
+    parfor j = 1:size(p_task,1)
         for k = 1:p_len
             ek = zeros(size(p_task));
             ek(j,k) = 1;
-            Yhat_eps = zeros(1,samples_num);
-            for l = 1:k_sparse
-                Yhat_eps = Yhat_eps + kernel(p_task(l,:) + dp.*ek(l,:) , range);
-            end
+
+            Yhat_eps = Yhat + kernel(p_task(j,:) + dp.*ek(j,:) , range) ...
+                        - kernel(p_task(j,:), range);
             Jp{j,k} = (Yhat_eps - Yhat) / dp(k);
+            delta(j,k) = (tp_scale(k)/(norm(Jp{j,k},'fro')))*sum(sum(Jp{j,k}.*(Yhat - Y)));
         end
     end
     
@@ -84,8 +71,7 @@ for i = 1:niter
     %Gradient step in p
     for j = 1:size(p_task,1)
         for k = 1:p_len
-            change = (tp_scale(k)/(norm(Jp{j,k},'fro')))*sum(sum(Jp{j,k}.*(Yhat - Y)));
-            p_task(j,k) = p_task(j,k) - change;
+            p_task(j,k) = p_task(j,k) - delta(j,k);
         end
     end
    
@@ -98,7 +84,7 @@ for i = 1:niter
 
     disp(['==== Number of iterations :', num2str(i), ' ====']);
     disp(['Objective: ', num2str(e)]);
-    for j = 1:k_sparse
+    for j = 1:size(p_task,1)
         disp(['p_test (',num2str(j),'): ', num2str(p_task(j,:))]);
     end
 end
@@ -106,7 +92,7 @@ end
 %% Visualization %%
 figure(1); clf;
 
-subplot(2,1,1);
+subplot(3,1,1);
 hold on;
 plot(range, Y);
 plot(range, Yhat);
@@ -114,11 +100,17 @@ legend('Truth', 'Learned');
 title('Truth vs. Learned');
 hold off;
 
-subplot(2,1,2);
+subplot(3,1,2);
 plot(error);
 xlabel('Number of Iterations');
 ylabel('Error');
 title('Objective Value');
+
+subplot(3,1,3);
+stem(p_task(:,5));
+xlabel('Magnitude');
+ylabel('Location');
+title('Learned Activation Map');
 
 end
 
