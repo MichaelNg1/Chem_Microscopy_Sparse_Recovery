@@ -11,13 +11,15 @@ range = 1:samples_num;
 % kernel = @lpsf_semi;     % Kernel used
 kernel = @lpsf;
 p_len = 4;                  % number of kernel parameters
-niter = 200;      
+niter = 50;      
+niter_outer = 7;
 LAMBDA_SCALE = 0.5;
-
+GAMMA_SCALE = 0.5;
+X_THRESHOLD = 1e-2;
 
 
 %-Take a single line as truth
-Y = RY(:,2);
+Y = RY(:,3);
 
 %- Initialize variables:
 x = 0.05 * ones(length(range), 1);
@@ -36,6 +38,7 @@ dp = 0.01 * ones(1, size(p_task,2));
 
 tx = 0.001;
 lambda = LAMBDA_SCALE*max(max(abs(Y)));
+gamma = 1;
 
 %-Functions to generate observation and objective
 objective = @(Yhat, Y, x, lambda) 0.5*norm(Yhat - Y,2)^2 + lambda * norm(x,1);
@@ -52,8 +55,6 @@ end
 Yhat = Yhat_mat' * x;
 
 error = zeros(1,niter);
-lambda_hist = zeros(1,niter);
-tx_hist = zeros(1,niter);
 for i = 1:niter
 
     %Update Parameters
@@ -69,8 +70,7 @@ for i = 1:niter
         Lip = norm(Yhat_mat * (Yhat_mat' * Z),'fro');
         tx = 0.5/Lip;
     end
-    lambda_hist (i) = lambda;
-    tx_hist (i) = tx;
+
     e = objective(Yhat, Y, x, lambda);
     error(i) = e;
     
@@ -117,8 +117,100 @@ for i = 1:niter
     disp(['==== Number of iterations :', num2str(i), ' ====']);
     disp(['Objective: ', num2str(e)]);
     for j = 1:size(p_task,1)
-        if(x(j) > 1e-2)
+        if(x(j) > X_THRESHOLD)
             disp(['p_test (',num2str(j),'): ', num2str(p_task(j,:)),'   ', num2str(x(j))]);
+        end
+    end
+end
+
+%%%%%%% Using the sparsified version, allow position to be modified:
+tp_scale = 1 * ones(1, size(p_task,2));
+tp_scale(4) = 0.5;
+
+for iter = 1:niter_outer
+    gamma = gamma * GAMMA_SCALE;
+    X_THRESHOLD = X_THRESHOLD * GAMMA_SCALE;
+
+    % Get the new sparsified parameters
+    sparse_indices = find(x > X_THRESHOLD);
+    x_new = x(sparse_indices);
+    p_task_new = p_task(sparse_indices,:);
+
+    x = x_new;
+    p_task = p_task_new;
+
+    Yhat_mat = zeros(length(x), samples_num);
+    for j = 1:length(x)
+        Yhat_mat(j,:) = kernel(p_task(j,:), range);
+    end
+    Yhat = Yhat_mat' * x;
+
+    error = zeros(1,niter);
+    lambda_hist = zeros(1,niter);
+    tx_hist = zeros(1,niter);
+    for i = 1:niter*4
+        %Update Parameters
+        lambda = gamma * LAMBDA_SCALE*max(max(abs(Yhat_mat * Y)));
+        
+        if (mod(i,3) == 0)
+            Z = randn(length(x),1);
+            Z = Z/norm(Z,'fro');
+            for iiter = 1:20
+                Z = (Yhat_mat * (Yhat_mat' * Z));
+                Z = Z/norm(Z,'fro'); 
+            end
+            Lip = norm(Yhat_mat * (Yhat_mat' * Z),'fro');
+            tx = 0.5/Lip;
+        end
+
+        e = objective(Yhat, Y, x, lambda);
+        error(i) = e;
+        
+        %Estimate Jacobian
+        Jp = cell(size(p_task));
+        parfor j = 1:size(p_task,1)
+            for k = 1:p_len
+                ek = zeros(size(p_task));
+                ek(j,k) = 1;
+
+                Yhat_mat_eps = Yhat_mat;
+                Yhat_mat_eps(j,:) = kernel(p_task(j,:) + dp.*ek(j,:) , range);
+                Yhat_eps = Yhat_mat_eps' * x;
+
+                Jp{j,k} = (Yhat_eps - Yhat) / dp(k);
+                delta(j,k) = (tp_scale(k)/(norm(Jp{j,k},'fro')))*sum(sum(x(j) * Jp{j,k}.*(Yhat - Y)));
+            end
+        end
+        
+        %Gradient step in p
+        for j = 1:size(p_task,1)
+            for k = 1:p_len
+                p_task(j,k) = p_task(j,k) - delta(j,k);
+            end
+        end
+       
+       %Gradient step in x
+        for j = 1:length(x)
+            Yhat_mat(j,:) = kernel(p_task(j,:), range);
+        end
+        Yhat = Yhat_mat' * x;
+        x = x - tx * Yhat_mat * (Yhat - Y);
+        x = sign(x).*max(abs(x - lambda*tx), 0);
+
+        %Project onto correct subspace ASSUMING LPSF(_semi)
+        p_task(:,1) = max(1e-12, p_task(:,1));
+        p_task(:,2) = max(1e-12, p_task(:,2));
+        p_task(:,3) = min(-1e-12, p_task(:,3));
+        p_task(:,4) = max(1e-12, p_task(:,4));
+        x = max(1e-12, x);
+
+
+        disp(['==== Number of iterations :', num2str(i), ',',num2str(iter), ' ====']);
+        disp(['Objective: ', num2str(e)]);
+        for j = 1:size(p_task,1)
+            if(x(j) > X_THRESHOLD)
+                disp(['p_test (',num2str(j),'): ', num2str(p_task(j,:)),'   ', num2str(x(j))]);
+            end
         end
     end
 end
@@ -126,30 +218,16 @@ end
 %% Visualization %%
 figure(1); clf;
 
-subplot(4,1,1);
+subplot(2,1,1);
 hold on;
 plot(range, Y);
 plot(range, Yhat);
+stem(p_task(:,4),x);
 legend('Truth', 'Learned');
 title('Truth vs. Learned');
 hold off;
 
-subplot(4,1,2);
-hold on;
-plot(lambda_hist);
-plot(tx_hist);
-hold off;
-xlabel('Number of Iterations');
-ylabel('Step Value');
-title('Step Scale');
-
-subplot(4,1,3);
-stem(x);
-xlabel('Magnitude');
-ylabel('Location');
-title('Learned Activation Map');
-
-subplot(4,1,4);
+subplot(2,1,2);
 plot(error(2:end));
 xlabel('Number of Iterations');
 ylabel('Error');
