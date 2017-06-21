@@ -1,4 +1,4 @@
-function [ ] = deconv_data_t5( RY )
+function [ ] = deconv_data_t6( RY )
 %DECONV_DATA_T4 Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -11,15 +11,16 @@ range = 1:samples_num;
 % kernel = @lpsf_semi;     % Kernel used
 kernel = @lpsf;
 p_len = 4;                  % number of kernel parameters
-niter = 50;      
-niter_outer = 7;
+niter = 100;      
+niter_outer = 5;
+more_iter = 2;
 LAMBDA_SCALE = 0.5;
 GAMMA_SCALE = 0.5;
 X_THRESHOLD = 1e-2;
 
 
 %-Take a single line as truth
-Y = RY(:,3);
+Y = RY(:,2);
 
 %- Initialize variables:
 x = 0.05 * ones(length(range), 1);
@@ -129,7 +130,6 @@ tp_scale(4) = 0.5;
 
 for iter = 1:niter_outer
     gamma = gamma * GAMMA_SCALE;
-    X_THRESHOLD = X_THRESHOLD * GAMMA_SCALE;
 
     % Get the new sparsified parameters
     sparse_indices = find(x > X_THRESHOLD);
@@ -138,6 +138,8 @@ for iter = 1:niter_outer
 
     x = x_new;
     p_task = p_task_new;
+
+    X_THRESHOLD = X_THRESHOLD * GAMMA_SCALE;
 
     Yhat_mat = zeros(length(x), samples_num);
     for j = 1:length(x)
@@ -148,7 +150,7 @@ for iter = 1:niter_outer
     error = zeros(1,niter);
     lambda_hist = zeros(1,niter);
     tx_hist = zeros(1,niter);
-    for i = 1:niter*4
+    for i = 1:niter*more_iter
         %Update Parameters
         lambda = gamma * LAMBDA_SCALE*max(max(abs(Yhat_mat * Y)));
         
