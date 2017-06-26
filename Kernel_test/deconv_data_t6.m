@@ -10,21 +10,21 @@ addpath('../Chem_microscopy_code');
 range = 1:samples_num;
 % kernel = @lpsf_semi;     % Kernel used
 kernel = @lpsf;
-p_len = 4;                  % number of kernel parameters
+p_len = 3;                  % number of kernel parameters
 niter = 100;      
-niter_outer = 5;
+niter_outer = 4;
 more_iter = 2;
-LAMBDA_SCALE = 0.5;
+LAMBDA_SCALE = 0.4;
 GAMMA_SCALE = 0.5;
-X_THRESHOLD = 1e-2;
+X_THRESHOLD = 5e-3;
 
 
 %-Take a single line as truth
-Y = RY(:,2);
+Y = RY(:,1);
 
 %- Initialize variables:
-x = 0.05 * ones(length(range), 1);
-p_shape = [.05, 2, -3];
+x = 1e-12 * ones(length(range), 1);
+p_shape = [.1, 2, -1.5];
 
 %-Use 'automatic' parameters:
 for i = 1:samples_num
@@ -32,7 +32,7 @@ for i = 1:samples_num
 end
 
 %-Gradient Step size + Jacobian differential
-tp_scale = 1 * ones(1, size(p_task,2));
+tp_scale = 2 * ones(1, size(p_task,2));
 tp_scale(4) = 0;
 
 dp = 0.01 * ones(1, size(p_task,2)); 
@@ -124,9 +124,28 @@ for i = 1:niter
     end
 end
 
+%% Visualization %%
+figure(1); clf;
+
+subplot(2,1,1);
+hold on;
+plot(range, Y);
+plot(range, Yhat);
+stem(p_task(:,4),x);
+legend('Truth', 'Learned');
+title('Truth vs. Learned');
+hold off;
+
+subplot(2,1,2);
+plot(error(2:end));
+xlabel('Number of Iterations');
+ylabel('Error');
+title('Objective Value');
+pause
+
 %%%%%%% Using the sparsified version, allow position to be modified:
-tp_scale = 1 * ones(1, size(p_task,2));
-tp_scale(4) = 0.5;
+tp_scale = 0.5 * ones(1, size(p_task,2));
+tp_scale(4) = 0.25;
 
 for iter = 1:niter_outer
     gamma = gamma * GAMMA_SCALE;
@@ -218,7 +237,7 @@ for iter = 1:niter_outer
 end
 
 %% Visualization %%
-figure(1); clf;
+figure(2); clf;
 
 subplot(2,1,1);
 hold on;

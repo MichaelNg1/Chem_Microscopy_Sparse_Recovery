@@ -12,17 +12,17 @@ range = 1:samples_num;
 kernel = @lpsf;
 p_len = 5;                  % number of kernel parameters
 p_eps = 0.06;
-k_sparse = 3;               % number of peaks
-niter = 200;      
+k_sparse = 6;               % number of peaks
+niter = 500;      
 
 %-Functions to generate observation and objective
 objective = @(Yhat, Y) 0.5*norm(Yhat - Y,2)^2;
 
 %-Take a single line as truth
-Y = RY(:,3)';
+Y = RY(:,1)';
 
 %- Initialize variables:
-p_shape = [.05, 2, -3];
+p_shape = [.1, 2, -1.5];
 p_scale = [.05];
 
 dY = Y(2:end) - Y(1:end-1);
@@ -34,8 +34,8 @@ Y_cand(dY_index) = 0;
 Y_cand(ddY_index) = 0;
 [~,I] = sort(Y_cand);
 p_loc = I( (end - k_sparse + 1): end);
-% p_loc(1) = 125;
-% p_loc(3) = 130;
+p_loc(4) = 63;
+%p_loc(6) = 84;
 % p_loc(4) = 51;
 % p_loc(7) = 59;
 
@@ -50,12 +50,13 @@ p_loc = I( (end - k_sparse + 1): end);
 for i = 1:k_sparse
     p_task(i,:) = [p_shape, p_loc(i), p_scale];
 end
+p_task(2,3) = -1;
 % p_task(2,4) = 64;
 
 %-Gradient Step size + Jacobian differential
-tp_scale = 0.05 * ones(1, size(p_task,2));
-tp_scale(4) = 75;
-tp_scale(5) = 0.05;
+tp_scale = 2 * ones(1, size(p_task,2));
+% tp_scale(3) = 50;
+tp_scale(5) = 0.1;
 
 dp = 0.01 * ones(1, size(p_task,2)); 
 
