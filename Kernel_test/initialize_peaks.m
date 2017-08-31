@@ -9,6 +9,8 @@ addpath('../Chem_microscopy_code');
 
 p_eps = 2e-1;
 p_keep = 1;
+SHOW_FIGURES = 0;
+
 [line_dim, line_num] = size( RY );
 theta = theta/180*pi; 
 DLt = @(RY,theta, offset) ...
@@ -41,23 +43,25 @@ threshold = Xhat_vals( keep_num_pix );
 Xhat(Xhat < threshold) = 0;
 
 %% Visualize the Results
-figure(10); clf;
-imagesc(Xhat);
-title('Selected Pixels')
+if SHOW_FIGURES
+	figure(10); clf;
+	imagesc(Xhat);
+	title('Selected Pixels')
 
-figure(11); clf;
-imagesc(DLt(RY, theta, offset))
-title('L*[RY]')
+	figure(11); clf;
+	imagesc(DLt(RY, theta, offset))
+	title('L*[RY]')
 
-%% Test to see what the linear transformation gives:
-RY_test = fourier_line_integral(Xhat,theta, 100,offset,Cy);
-RY_adj = fourier_line_integral(DLt(RY, theta, offset),theta, 100,offset,Cy);
+	%% Test to see what the linear transformation gives:
+	RY_test = fourier_line_integral(Xhat,theta, 100,offset,Cy);
+	RY_adj = fourier_line_integral(DLt(RY, theta, offset),theta, 100,offset,Cy);
 
-figure(12); clf;
-for i = 1:line_num
-	subplot(2, ceil(line_num/2), i)
-	hold on;
-	plot(RY_test(:,i))
-	plot(RY_adj(:,i))
-	hold off;
+	figure(12); clf;
+	for i = 1:line_num
+		subplot(2, ceil(line_num/2), i)
+		hold on;
+		plot(RY_test(:,i))
+		plot(RY_adj(:,i))
+		hold off;
+	end
 end
