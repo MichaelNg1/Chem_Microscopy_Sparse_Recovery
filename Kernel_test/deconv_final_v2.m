@@ -318,14 +318,15 @@ for iiter = 1:niter
 
     %---Update Lip/lambda
     if UPDATE_LIPSCHITZ && mod(iiter,niterUpdateLip) == 0
-        disp('Calculating Lipschitz Constant of Operator...');
+        disp('Calculateing Lipschitz Constant of Operator...');
         Z = randn(nbins,nlines);
         Z = Z/norm(Z,'fro');
-        for iiter = 1:20
-            Z = DLt(DL(Z,theta,D_kernel),theta,D_kernel);
+        for J = 1:20
+            Z = DLt(DL(Z,theta,p),theta,D_kernel);
             Z = Z/norm(Z,'fro'); 
         end
-        Lip = 2*norm(DLt(DL(Z,theta,D_kernel),theta,D_kernel),'fro');
+        Lip = 2*norm(DLt(DL(Z,theta,p),theta,D_kernel),'fro');
+        tx = 1/Lip;
     end
     
     if UPDATE_LAMBDA && mod(iiter,niterUpdateLambda) == 0

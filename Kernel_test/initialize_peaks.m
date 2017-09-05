@@ -1,4 +1,4 @@
-function [Xhat] = initialize_peaks( RY, theta, n, offset, Cy )
+function [Xhat, RY_test] = initialize_peaks( RY, theta, n, offset, Cy )
 %% This function will determine which pixels to consider for analysis
 % Inputs:
 %	- RY: The lines under consideration
@@ -9,10 +9,10 @@ addpath('../Chem_microscopy_code');
 
 p_eps = 2e-1;
 p_keep = 1;
-SHOW_FIGURES = 0;
+SHOW_FIGURES = 1;
 
 [line_dim, line_num] = size( RY );
-theta = theta/180*pi; 
+% theta = theta/180*pi; 
 DLt = @(RY,theta, offset) ...
         fourier_line_integral_adjoint(RY, theta, n, offset, Cy);
 
@@ -28,7 +28,8 @@ for i = 1:line_num
 	Y_cand = Y;
 	Y_cand(dY_index) = 0;
 	Y_cand(ddY_index) = 0;
-	%Y_cand(Y_cand > 0) = 1;
+
+	Y_cand = 5*normc(Y_cand);			%% TEMPORARY FIX!!
 
 	X(:,:,i) = DLt( Y_cand, theta(i), offset(i) );
 end
@@ -42,6 +43,8 @@ Xhat_vals = sort( Xhat_vals, 'descend' );
 threshold = Xhat_vals( keep_num_pix );
 Xhat(Xhat < threshold) = 0;
 
+RY_test = fourier_line_integral(Xhat,theta, n(1),offset,Cy);
+
 %% Visualize the Results
 if SHOW_FIGURES
 	figure(10); clf;
@@ -53,15 +56,15 @@ if SHOW_FIGURES
 	title('L*[RY]')
 
 	%% Test to see what the linear transformation gives:
-	RY_test = fourier_line_integral(Xhat,theta, 100,offset,Cy);
-	RY_adj = fourier_line_integral(DLt(RY, theta, offset),theta, 100,offset,Cy);
+	RY_adj = fourier_line_integral(DLt(RY, theta, offset),theta, n(1),offset,Cy);
 
 	figure(12); clf;
 	for i = 1:line_num
 		subplot(2, ceil(line_num/2), i)
 		hold on;
 		plot(RY_test(:,i))
-		plot(RY_adj(:,i))
+		plot(RY(:,i))
+        plot([0 n(1)], ones(1,2) * 1.5 * mean(RY_test(:,i)))
 		hold off;
 	end
 end
