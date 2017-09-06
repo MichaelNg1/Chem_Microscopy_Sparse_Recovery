@@ -1,6 +1,7 @@
 function [ ] = deconv_data_t6( RY )
-%DECONV_DATA_T4 Summary of this function goes here
-%   Detailed explanation goes here
+%DECONV_DATA_T6 Attempts to fit the observation by placing a kernel per pixel.
+% At each iteration, certain pixels are thresholded out based on magnitude.
+% The objective minimizes reconstruction and uses sparsity regularization.
 
 %-Add the path for original lpsf function
 addpath('../Chem_microscopy_code');
@@ -44,7 +45,7 @@ gamma = 1;
 %-Functions to generate observation and objective
 objective = @(Yhat, Y, x, lambda) 0.5*norm(Yhat - Y,2)^2 + lambda * norm(x,1);
 
-%% (TASK 4) Estimate p %%
+
 % For this task the objective function used will be:
 % min 0.5 * || D(p) * x - y ||_2 ^2 + lambda ||x||_1
 %       - d: kernel function

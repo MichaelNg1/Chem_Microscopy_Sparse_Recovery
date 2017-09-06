@@ -1,6 +1,6 @@
-function [ ] = deconv_data_t4( RY )
+function [ ] = deconv_data_t7(RY, LD, D, params_init, dim,lambda)
 %DECONV_DATA_T4 Attempts to fit the observation with a finite number of kernels.
-% The locations are chosen via 1st/2nd gradient information and thresholded to the appropriate number of truth peaks.
+% The locations are chosen via 1st/2nd gradient information without prior knowledge on number of peaks.
 % Here we use all the kernel parameters (i.e. shape, location, magnitude)
 % The objective minimizes reconstruction and uses sparsity regularization.
 
@@ -12,52 +12,50 @@ addpath('../Chem_microscopy_code');
 range = 1:samples_num;
 % kernel = @lpsf_semi;     % Kernel used
 kernel = @lpsf;
+SELECT_LINE = 4;
+SELECT_DATA = 6;
 p_len = 5;                  % number of kernel parameters
 p_eps = 0.06;
-k_sparse = 6;               % number of peaks
 niter = 500;      
 
 %-Functions to generate observation and objective
 objective = @(Yhat, Y) 0.5*norm(Yhat - Y,2)^2;
 
-%-Take a single line as truth
-Y = RY(:,1)';
-
 %- Initialize variables:
 p_shape = [.1, 2, -1.5];
 p_scale = [.05];
 
-dY = Y(2:end) - Y(1:end-1);
-ddY = dY(2:end) - dY(1:end-1);
-dY_index = find(abs(dY)/norm(dY,2) > p_eps);
-ddY_index = find(ddY >= 0);
-Y_cand = Y;
-Y_cand(dY_index) = 0;
-Y_cand(ddY_index) = 0;
-[~,I] = sort(Y_cand);
-p_loc = I( (end - k_sparse + 1): end);
-p_loc(4) = 63;
-%p_loc(6) = 84;
-% p_loc(4) = 51;
-% p_loc(7) = 59;
+theta = params_init.Rotation/180*pi; 
+n = dim.n;
+offset = dim.Offset;
+Cy = dim.Cy;
+%direction = abs( dim.Direction );           %% THIS IS TEMPORARY
 
+%- Flip the signal if the direction is negative
+direction = dim.Direction;
+if( direction(SELECT_LINE) == -1 )
+    RY(:, SELECT_LINE) = flip( RY(:, SELECT_LINE) );
+end
 
-%-Use Good initializations: (for a specific sample...)
-% p_task(1,:) = [5, 5, -2, 39, .005];
-% p_task(2,:) = [5, 5, -2, 59, .005];
-% p_task(1,:) = [.1, 2, -3, 39, 0.05];    % 'BEST FIT' LPSF
-% p_task(2,:) = [.1, 2, -3, 59, 0.05];    % 'BEST FIT' LPSF
+%-Take a single line as truth
+Y = RY(:,SELECT_LINE)';
+
+[~, RY_INIT] = initialize_peaks( RY, theta, n, offset, Cy );
+RY_MEANS = 1.75 * mean(RY_INIT);
+
+%- Threshold out all the non-peaks
+RY_INIT(RY_INIT(:,SELECT_LINE) < RY_MEANS( SELECT_LINE ), SELECT_LINE ) = 0;
+p_loc = find(RY_INIT(:, SELECT_LINE));
+k_sparse = length( p_loc );
 
 %-Use 'automatic' parameters:
 for i = 1:k_sparse
-    p_task(i,:) = [p_shape, p_loc(i), p_scale];
+    p_task(i,:) = [p_shape, range( p_loc(i) ), p_scale];
 end
-p_task(2,3) = -1;
-% p_task(2,4) = 64;
 
 %-Gradient Step size + Jacobian differential
-tp_scale = 2 * ones(1, size(p_task,2));
-% tp_scale(3) = 50;
+tp_scale = 0.1 * ones(1, size(p_task,2));
+tp_scale(4) = 0;
 tp_scale(5) = 0.1;
 
 dp = 0.01 * ones(1, size(p_task,2)); 
@@ -130,6 +128,11 @@ plot(error);
 xlabel('Number of Iterations');
 ylabel('Error');
 title('Objective Value');
+
+
+filename = ['DATA' num2str(SELECT_DATA) '_LINE' num2str(SELECT_LINE) '_peaks' num2str(k_sparse) '_' date];
+saveas(gcf, [filename '.png']);
+save([filename '.mat'], 'p_task');
 
 end
 

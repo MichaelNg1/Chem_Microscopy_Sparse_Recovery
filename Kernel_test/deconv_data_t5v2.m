@@ -1,6 +1,6 @@
 function [ ] = deconv_data_t5( RY )
-%DECONV_DATA_T4 Summary of this function goes here
-%   Detailed explanation goes here
+%DECONV_DATA_T5 Attempts to fit the observation by placing a kernel per pixel.
+% The objective minimizes reconstruction and uses sparsity regularization.
 
 %-Add the path for original lpsf function
 addpath('../Chem_microscopy_code');
