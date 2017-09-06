@@ -12,8 +12,8 @@ addpath('../Chem_microscopy_code');
 range = 1:samples_num;
 % kernel = @lpsf_semi;     % Kernel used
 kernel = @lpsf;
-SELECT_LINE = 4;
-SELECT_DATA = 6;
+SELECT_LINE = 5;
+SELECT_DATA = 7;
 p_len = 5;                  % number of kernel parameters
 p_eps = 0.06;
 niter = 500;      
@@ -29,7 +29,6 @@ theta = params_init.Rotation/180*pi;
 n = dim.n;
 offset = dim.Offset;
 Cy = dim.Cy;
-%direction = abs( dim.Direction );           %% THIS IS TEMPORARY
 
 %- Flip the signal if the direction is negative
 direction = dim.Direction;
