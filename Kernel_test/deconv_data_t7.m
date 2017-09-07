@@ -12,7 +12,7 @@ addpath('../Chem_microscopy_code');
 range = 1:samples_num;
 % kernel = @lpsf_semi;     % Kernel used
 kernel = @lpsf;
-SELECT_LINE = 5;
+SELECT_LINE = 2;
 SELECT_DATA = 7;
 p_len = 5;                  % number of kernel parameters
 p_eps = 0.06;
