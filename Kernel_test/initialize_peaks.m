@@ -7,7 +7,7 @@ function [Xhat, RY_test] = initialize_peaks( RY, theta, n, offset, Cy )
 %-Add the path for original line_integral_adjoint function
 addpath('../Chem_microscopy_code');
 
-p_eps = 2e-1;
+p_eps = 5e-1;
 p_keep = 1;
 SHOW_FIGURES = 1;
 
@@ -66,5 +66,6 @@ if SHOW_FIGURES
 		plot(RY(:,i))
         plot([0 n(1)], ones(1,2) * 1.5 * mean(RY_test(:,i)))
 		hold off;
-	end
+    end
+    pause;
 end
