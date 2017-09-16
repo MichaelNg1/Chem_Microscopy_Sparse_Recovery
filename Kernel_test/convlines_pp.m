@@ -9,11 +9,11 @@ DIRECTION_BACKWARD = -1;
 RY = zeros(size(LX));
 for I = 1:nangles
 
-	if dir(I) == DIRECTION_FORWARD
+	% if dir(I) == DIRECTION_FORWARD
         RYI = D(:,:,I) * LX(:,I);
-    elseif dir(I) == DIRECTION_BACKWARD
-        RYI = flipud(D(:,:,I)) * LX(:,I);
-    end
+    % elseif dir(I) == DIRECTION_BACKWARD
+    %     RYI = flipud(D(:,:,I)) * LX(:,I);
+    % end
 
     RY(:,I) = RYI;
 end

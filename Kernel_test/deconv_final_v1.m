@@ -113,7 +113,8 @@ f = @(RY,X,DLX,L) L*sum(sum(abs(X))) + 1/2*norm(RY - DLX,'fro')^2;
 alpha = params_init.Amplitude;        %-Initial scaling
 theta = params_init.Rotation/180*pi;  %-Initial angle of slopes
 tau   = params_init.Translation;      %-Initial translation
-p     = params_init.p;                %-Initial kernel parameter
+%p     = params_init.p;                %-Initial kernel parameter
+p     = [.1, 2, -1.5];
 
 % Use the parameter per pixel: 
 p     = repmat(p, [ nbins, 1, nlines ]);
@@ -198,14 +199,7 @@ for iiter = 1:niter
     DLXhat = DL(Xhat,theta,D_kernel);
 
     RY_test = fourier_line_integral(Xhat,theta, n(1),offset,Cy);
-    figure(14); clf;
-    for i = 1:nlines
-        subplot(2, ceil(nlines/2), i)
-        hold on;
-        plot(RY_test(:,i))
-        hold off;
-    end
-    
+  
 
     %---Jacobian---%
     if CALIBRATE_TRANSLATION 

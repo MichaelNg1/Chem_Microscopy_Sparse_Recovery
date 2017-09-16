@@ -16,7 +16,7 @@ SELECT_DATA = 6;
 SAVE_DATA = 0;
 p_len = 3;                  % number of kernel parameters
 p_eps = 0.06;
-niter = 200;      
+niter = 500;      
 
 %-Functions to generate observation and objective
 objective = @(Yhat, Y) 0.5*norm(Yhat - Y,2)^2;
